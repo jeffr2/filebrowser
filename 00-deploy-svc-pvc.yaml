@@ -2,8 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: filebrowser
-  labels:
-    app: filebrowser
 spec:
   replicas: 1
   selector:
@@ -22,39 +20,27 @@ spec:
         args:
           - --no-auth
         volumeMounts:
+          # Monta o ConfigMap no caminho /config/filebrowser.json
+          - mountPath: /config/filebrowser.json
+            name: filebrowser-config
+            subPath: filebrowser.json
+          # Monta o arquivo filebrowser.db em /config/filebrowser.db
+          - mountPath: /config/filebrowser.db
+            name: filebrowser-db
+            subPath: filebrowser.db
+          # Monta o diretório de dados no caminho /srv
           - mountPath: /srv
             name: filebrowser-data
-        env:
-          - name: FILEBROWSER_DATABASE
-            value: /config/filebrowser.db
-          - name: FILEBROWSER_LOG
-            value: /config/filebrowser.log
       volumes:
+        # Volume para o ConfigMap (filebrowser.json)
+        - name: filebrowser-config
+          configMap:
+            name: filebrowser-config
+        # Volume PVC para o arquivo filebrowser.db
+        - name: filebrowser-db
+          persistentVolumeClaim:
+            claimName: filebrowser-pvc
+        # Volume PVC para os dados do File Browser
         - name: filebrowser-data
           persistentVolumeClaim:
             claimName: filebrowser-pvc
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: filebrowser-service
-spec:
-  selector:
-    app: filebrowser
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 80
-  type: ClusterIP
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: filebrowser-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
