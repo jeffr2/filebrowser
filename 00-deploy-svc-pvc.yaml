@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filebrowser
+  labels:
+    app: filebrowser
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: filebrowser
+  template:
+    metadata:
+      labels:
+        app: filebrowser
+    spec:
+      containers:
+      - name: filebrowser
+        image: filebrowser/filebrowser:latest
+        ports:
+        - containerPort: 80
+        args:
+          - --no-auth
+        volumeMounts:
+          - mountPath: /srv
+            name: filebrowser-data
+        env:
+          - name: FILEBROWSER_DATABASE
+            value: /config/filebrowser.db
+          - name: FILEBROWSER_LOG
+            value: /config/filebrowser.log
+      volumes:
+        - name: filebrowser-data
+          persistentVolumeClaim:
+            claimName: filebrowser-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: filebrowser-service
+spec:
+  selector:
+    app: filebrowser
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: filebrowser-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
